@@ -14,7 +14,8 @@ die() {
 
 [ -z "$SERENITY_BOCHS_BIN" ] && SERENITY_BOCHS_BIN="bochs"
 
-[ -z "$SERENITY_QEMU_BIN" ] && SERENITY_QEMU_BIN="qemu-system-i386"
+# [ -z "$SERENITY_QEMU_BIN" ] && SERENITY_QEMU_BIN="qemu-system-i386"
+[ -z "$SERENITY_QEMU_BIN" ] && SERENITY_QEMU_BIN="qemu-system-x86_64"
 
 [ -z "$SERENITY_KERNEL_CMDLINE" ] && SERENITY_KERNEL_CMDLINE="hello"
 
@@ -110,6 +111,7 @@ elif [ "$SERENITY_RUN" = "q35_cmd" ]; then
     "$SERENITY_QEMU_BIN" \
         $SERENITY_COMMON_QEMU_Q35_ARGS \
         $SERENITY_KVM_ARG \
+        -accel=hvf \
         -netdev user,id=breh,hostfwd=tcp:127.0.0.1:8888-10.0.2.15:8888,hostfwd=tcp:127.0.0.1:8823-10.0.2.15:23 \
         -device e1000,netdev=breh \
         -kernel Kernel/Kernel \
@@ -128,9 +130,10 @@ elif [ "$SERENITY_RUN" = "qcmd" ]; then
         -append "${SERENITY_KERNEL_CMDLINE}"
 else
     # Meta/run.sh: qemu with user networking
+    # $SERENITY_KVM_ARG \
     "$SERENITY_QEMU_BIN" \
+        --accel hvf \
         $SERENITY_COMMON_QEMU_ARGS \
-        $SERENITY_KVM_ARG \
         $SERENITY_PACKET_LOGGING_ARG \
         -netdev user,id=breh,hostfwd=tcp:127.0.0.1:8888-10.0.2.15:8888,hostfwd=tcp:127.0.0.1:8823-10.0.2.15:23,hostfwd=tcp:127.0.0.1:8000-10.0.2.15:8000,hostfwd=tcp:127.0.0.1:2222-10.0.2.15:22 \
         -device e1000,netdev=breh \
