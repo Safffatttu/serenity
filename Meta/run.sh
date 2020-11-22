@@ -28,6 +28,11 @@ fi
 
 [ -z "$SERENITY_QEMU_BIN" ] && SERENITY_QEMU_BIN="qemu-system-i386"
 
+
+# Ue Browser startup time: 12000ms => 1400ms
+# Enabling qemu Mac virtualization framework # only qemu-system-x86_64 supports 
+echo BIN $SERENITY_QEMU_BIN ARG $SERENITY_VIRT_TECH_ARG
+
 [ -z "$SERENITY_KERNEL_CMDLINE" ] && SERENITY_KERNEL_CMDLINE="hello"
 
 [ -z "$SERENITY_RAM_SIZE" ] && SERENITY_RAM_SIZE=256M
