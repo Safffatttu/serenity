@@ -45,7 +45,42 @@ public:
     virtual String to_utf8(const StringView&) override;
 };
 
+class IBM866Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
 class ISO_8859_2Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
+class ISO_8859_3Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
+class ISO_8859_4Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
+class ISO_8859_5Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
+class ISO_8859_6Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
+class ISO_8859_7Decoder final : public Decoder {
+public:
+    virtual String to_utf8(const StringView&) override;
+};
+
+class ISO_8859_8Decoder final : public Decoder {
 public:
     virtual String to_utf8(const StringView&) override;
 };
