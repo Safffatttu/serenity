@@ -102,7 +102,12 @@ void Application::unregister_global_shortcut_action(Badge<Action>, Action& actio
 
 Action* Application::action_for_key_event(const KeyEvent& event)
 {
-    auto it = m_global_shortcut_actions.find(Shortcut(event.modifiers(), (KeyCode)event.key()));
+    Shortcut shortcut(event.modifiers(), (KeyCode)event.key());
+
+    if (!shortcut.is_valid())
+        return nullptr;
+
+    auto it = m_global_shortcut_actions.find(shortcut);
     if (it == m_global_shortcut_actions.end())
         return nullptr;
     return (*it).value;
