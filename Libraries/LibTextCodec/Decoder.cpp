@@ -24,9 +24,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <AK/HashMap.h>
 #include <AK/String.h>
 #include <AK/StringBuilder.h>
+#include <AK/StringView.h>
+#include <AK/Traits.h>
 #include <LibTextCodec/Decoder.h>
+
+#include "Tables.h"
 
 namespace TextCodec {
 
@@ -46,14 +51,91 @@ static UTF8Decoder& utf8_decoder()
     return *decoder;
 }
 
-Decoder* decoder_for(const String& a_encoding)
+static LookupDecoder* lookup_decoder(const String& standarized_encoding)
+{
+    static HashMap<String, LookupDecoder*, CaseInsensitiveStringTraits> decoders;
+
+    if (auto decoder = decoders.find(standarized_encoding); decoder != decoders.end()) {
+        return decoder->value;
+    } else {
+        LookupDecoder* newDecoder;
+
+        if (standarized_encoding == "IBM866") {
+            newDecoder = new LookupDecoder(IBM866_table);
+        } else if (standarized_encoding == "ISO-8859-2") {
+            newDecoder = new LookupDecoder(ISO_8859_2_table);
+        } else if (standarized_encoding == "ISO-8859-3") {
+            newDecoder = new LookupDecoder(ISO_8859_3_table);
+        } else if (standarized_encoding == "ISO-8859-4") {
+            newDecoder = new LookupDecoder(ISO_8859_4_table);
+        } else if (standarized_encoding == "ISO-8859-5") {
+            newDecoder = new LookupDecoder(ISO_8859_5_table);
+        } else if (standarized_encoding == "ISO-8859-6") {
+            newDecoder = new LookupDecoder(ISO_8859_6_table);
+        } else if (standarized_encoding == "ISO-8859-7") {
+            newDecoder = new LookupDecoder(ISO_8859_7_table);
+        } else if (standarized_encoding == "ISO-8859-8") {
+            newDecoder = new LookupDecoder(ISO_8859_8_table);
+        } else if (standarized_encoding == "ISO-8859-10") {
+            newDecoder = new LookupDecoder(ISO_8859_10_table);
+        } else if (standarized_encoding == "ISO-8859-13") {
+            newDecoder = new LookupDecoder(ISO_8859_13_table);
+        } else if (standarized_encoding == "ISO-8859-14") {
+            newDecoder = new LookupDecoder(ISO_8859_14_table);
+        } else if (standarized_encoding == "ISO-8859-15") {
+            newDecoder = new LookupDecoder(ISO_8859_15_table);
+        } else if (standarized_encoding == "ISO-8859-16") {
+            newDecoder = new LookupDecoder(ISO_8859_16_table);
+        } else if (standarized_encoding == "KOI8-R") {
+            newDecoder = new LookupDecoder(KOI8_R_table);
+        } else if (standarized_encoding == "KOI8-U") {
+            newDecoder = new LookupDecoder(KOI8_U_table);
+        } else if (standarized_encoding == "macintosh") {
+            newDecoder = new LookupDecoder(macintosh_table);
+        } else if (standarized_encoding == "windows-874") {
+            newDecoder = new LookupDecoder(cp874_table);
+        } else if (standarized_encoding == "windows-1250") {
+            newDecoder = new LookupDecoder(windows_1250_table);
+        } else if (standarized_encoding == "windows-1251") {
+            newDecoder = new LookupDecoder(windows_1251_table);
+        } else if (standarized_encoding == "windows-1252") {
+            newDecoder = new LookupDecoder(windows_1252_table);
+        } else if (standarized_encoding == "windows-1253") {
+            newDecoder = new LookupDecoder(windows_1253_table);
+        } else if (standarized_encoding == "windows-1254") {
+            newDecoder = new LookupDecoder(windows_1254_table);
+        } else if (standarized_encoding == "windows-1255") {
+            newDecoder = new LookupDecoder(windows_1255_table);
+        } else if (standarized_encoding == "windows-1256") {
+            newDecoder = new LookupDecoder(windows_1256_table);
+        } else if (standarized_encoding == "windows-1257") {
+            newDecoder = new LookupDecoder(windows_1257_table);
+        } else if (standarized_encoding == "windows-1258") {
+            newDecoder = new LookupDecoder(windows_1258_table);
+        } else if (standarized_encoding == "x-mac-cyrillic") {
+            newDecoder = new LookupDecoder(mac_cyrillic_table);
+        } else {
+            return nullptr;
+        }
+
+        decoders.set(standarized_encoding, newDecoder);
+        return newDecoder;
+    }
+}
+
+Decoder* decoder_for(const String& encoding)
 {
     auto encoding = get_standardized_encoding(a_encoding);
     if (encoding.equals_ignoring_case("windows-1252"))
         return &latin1_decoder();
     if (encoding.equals_ignoring_case("utf-8"))
         return &utf8_decoder();
-    dbgln("TextCodec: No decoder implemented for encoding '{}'", a_encoding);
+
+    // Check if exists there exists lookup_decoder
+    if (auto* newDecoder = lookup_decoder(encoding))
+        return newDecoder;
+
+    dbg() << "TextCodec: No decoder implemented for encoding '" << encoding << "'";
     return nullptr;
 }
 
@@ -65,7 +147,7 @@ String get_standardized_encoding(const String& encoding)
     if (trimmed_lowercase_encoding.is_one_of("unicode-1-1-utf-8", "unicode11utf8", "unicode20utf8", "utf-8", "utf8", "x-unicode20utf8"))
         return "UTF-8";
     if (trimmed_lowercase_encoding.is_one_of("866", "cp866", "csibm866", "ibm666"))
-        return "IBM666";
+        return "IBM866";
     if (trimmed_lowercase_encoding.is_one_of("csisolatin2", "iso-8859-2", "iso-ir-101", "iso8859-2", "iso88592", "iso_8859-2", "iso_8859-2:1987", "l2", "latin2"))
         return "ISO-8859-2";
     if (trimmed_lowercase_encoding.is_one_of("csisolatin3", "iso-8859-3", "iso-ir-109", "iso8859-3", "iso88593", "iso_8859-3", "iso_8859-3:1988", "l3", "latin3"))
@@ -169,4 +251,13 @@ String Latin1Decoder::to_utf8(const StringView& input)
     return builder.to_string();
 }
 
+String LookupDecoder::to_utf8(const StringView& input)
+{
+    StringBuilder builder(input.length());
+    for (size_t i = 0; i < input.length(); ++i) {
+        u8 ch = input[i];
+        builder.append_code_point(m_lookup_table[ch]);
+    }
+    return builder.to_string();
+}
 }
