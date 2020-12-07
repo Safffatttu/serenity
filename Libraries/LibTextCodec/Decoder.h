@@ -55,15 +55,6 @@ private:
     const Vector<u32>& m_lookup_table;
 };
 
-class ISO_8859_3Decoder final : public Decoder {
-public:
-    virtual String to_utf8(const StringView&) override;
-};
-
-private:
-const Vector<u32>& m_lookup_table;
-};
-
 Decoder* decoder_for(const String& encoding);
 String get_standardized_encoding(const String& encoding);
 bool is_standardized_encoding(const String& encoding);
