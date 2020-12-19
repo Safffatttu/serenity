@@ -123,7 +123,7 @@ static LookupDecoder* lookup_decoder(const String& standarized_encoding)
     }
 }
 
-Decoder* decoder_for(const String& encoding)
+Decoder* decoder_for(const String& a_encoding)
 {
     auto encoding = get_standardized_encoding(a_encoding);
     if (encoding.equals_ignoring_case("windows-1252"))
