@@ -5,7 +5,7 @@ project(
     DESCRIPTION "Orchestrate host and target builds in a single build"
     LANGUAGES NONE
 )
-
+set(CMAKE_OSX_SYSROOT "")
 # NOTE: Before CMake 3.19, if a custom command is attached to multiple step targets for Makefile and Visual Studio generators,
 #       it might be run multiple times during the build. Enable new behavior of policy CMP0114 to avoid this, or apply the
 #       workaround from https://gitlab.kitware.com/cmake/cmake/-/issues/18663#note_489967
