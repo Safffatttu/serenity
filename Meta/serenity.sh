@@ -421,6 +421,7 @@ if [[ "$CMD" =~ ^(build|install|image|copy-src|run|gdb|test|rebuild|recreate|kad
                 ADDR2LINE="$TOOLCHAIN_DIR/bin/llvm-addr2line"
             else
                 ADDR2LINE="$TOOLCHAIN_DIR/binutils/binutils/addr2line"
+                ADDR2LINE="Toolchain/Build/i686/binutils/binutils/addr2line"
             fi
             if [ -x "$BINARY_FILE_PATH" ]; then
                 "$ADDR2LINE" -e "$BINARY_FILE_PATH" "$@"

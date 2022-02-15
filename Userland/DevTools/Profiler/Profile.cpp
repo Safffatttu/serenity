@@ -36,6 +36,7 @@ static void sort_profile_nodes(Vector<NonnullRefPtr<ProfileNode>>& nodes)
 Profile::Profile(Vector<Process> processes, Vector<Event> events)
     : m_processes(move(processes))
     , m_events(move(events))
+    , m_file_event_nodes(FileEventNode::create(""))
 {
     for (size_t i = 0; i < m_events.size(); ++i) {
         if (m_events[i].data.has<Event::SignpostData>())
@@ -48,6 +49,7 @@ Profile::Profile(Vector<Process> processes, Vector<Event> events)
     m_model = ProfileModel::create(*this);
     m_samples_model = SamplesModel::create(*this);
     m_signposts_model = SignpostsModel::create(*this);
+    m_file_event_model = FileEventModel::create(*this);
 
     rebuild_tree();
 }
@@ -205,7 +207,29 @@ void Profile::rebuild_tree()
                 }
             }
         }
+
+        if (event.data.has<Event::ReadData>()) {
+            auto const& read_event = event.data.get<Event::ReadData>();
+
+            // auto const it = m_file_event_nodes.find_if([&](auto const& node) {
+            //     return read_event.path == node->path.parent().string() || node->path.string() == read_event.path;
+            // });
+            // dbgln("Started {}", read_event.path);
+
+            auto v = (*m_file_event_nodes->find_node_or_extend_recursive(read_event.path));
+            v->count++;
+            // dbgln("YO {}", v->count); // THIS IS OK
+            // if (it.is_end()) {
+            //     m_file_event_nodes.append(FileEventNode::create(read_event.path));
+            //     dbgln("New path: {} created new        {}", read_event.path, read_event.path);
+            // } else {
+            //     dbgln("New path: {} found coresponding {}", read_event.path, (*it)->path.string());
+            //     (*it)->count++;
+            // }
+        }
     }
+
+    m_file_event_nodes->dump_recursive();
 
     sort_profile_nodes(roots);
 
@@ -579,6 +603,11 @@ void Profile::set_source_index(GUI::ModelIndex const& index)
 GUI::Model* Profile::source_model()
 {
     return m_source_model;
+}
+
+GUI::Model* Profile::file_event_model()
+{
+    return m_file_event_model;
 }
 
 ProfileNode::ProfileNode(Process const& process)

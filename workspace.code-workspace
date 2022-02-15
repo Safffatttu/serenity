@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.ahk": "ahk",
+			"barrier": "cpp",
+			"chrono": "cpp",
+			"random": "cpp",
+			"latch": "cpp",
+			"limits": "cpp",
+			"semaphore": "cpp",
+			"valarray": "cpp",
+			"*.tcc": "cpp",
+			"ranges": "cpp",
+			"string": "cpp",
+			"*.pro": "cpp",
+			"*.idl": "cpp",
+			"new": "cpp",
+			"string_view": "cpp",
+			"source_location": "cpp",
+			"array": "cpp",
+			"rope": "cpp"
+		}
+	}
+}

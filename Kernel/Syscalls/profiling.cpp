@@ -58,6 +58,8 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, u64 event_mask)
         return EPERM;
     SpinlockLocker lock(g_profiling_lock);
     g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE | PERF_EVENT_MMAP;
+    // event_mask = PERF_EVENT_READ;
+    // dbgln("YOYOYOYO {}", event_mask);
     process->set_profiling(true);
     if (!process->create_perf_events_buffer_if_needed()) {
         process->set_profiling(false);

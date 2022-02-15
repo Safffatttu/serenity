@@ -252,6 +252,16 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     timeline_view->on_selection_change = [&] { statusbar_update(); };
     flamegraph_view->on_hover_change = [&] { statusbar_update(); };
 
+	auto filesystem_tab = TRY(tab_widget->try_add_tab<GUI::Widget>("Filesystem"));
+	filesystem_tab->set_layout<GUI::VerticalBoxLayout>();
+	filesystem_tab->layout()->set_margins(4);
+
+	auto filesystem_tree_view = TRY(filesystem_tab->try_add<GUI::TreeView>());
+	filesystem_tree_view->set_should_fill_selected_rows(true);
+	filesystem_tree_view->set_column_headers_visible(true);
+	filesystem_tree_view->set_selection_behavior(GUI::TreeView::SelectionBehavior::SelectRows);
+	filesystem_tree_view->set_model(profile->file_event_model());
+	
     auto file_menu = TRY(window->try_add_menu("&File"));
     TRY(file_menu->try_add_action(GUI::CommonActions::make_quit_action([&](auto&) { app->quit(); })));
 
