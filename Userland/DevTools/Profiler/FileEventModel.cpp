@@ -30,7 +30,7 @@ void FileEventNode::dump_recursive(int level)
         sb.append("    ");
     }
 
-    dbgln("{}  {}{}:{}", m_parent, sb.to_string(), m_path, count);
+    dbgln("{}->{}  {}{}:{}", this, m_parent, sb.to_string(), m_path, count);
     for (auto& child: m_children)
     {
         child->dump_recursive(level + 1);
@@ -41,12 +41,6 @@ void FileEventNode::dump_recursive(int level)
 Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String searched_path) // A/B/C
 {
     dbgln("find_node_or_extend_recursive {} {}", searched_path, full_path());
-
-    dbgln("simple check {} {}", searched_path, m_path);
-    if (searched_path == m_path) {
-        dbgln("found");
-        return this;
-    }
 
     if (searched_path == ""sv)
     {
@@ -65,22 +59,18 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
     for (auto& child : m_children) {
         dbgln("Comparing {} with {}", child->m_path, current);
         if (child->m_path == current) {
+            dbgln("Went there");
             return child->find_node_or_extend_recursive(new_s);
         }
     }
 
-    if (!searched_path.starts_with("/"sv) && !m_parent) {
-        dbgln("Creating node for special path {}", searched_path);
-        auto new_child = create(searched_path, this);
-        m_children.append(new_child);
-        return new_child.ptr();
-    }
+    dbgln("Not found anything LETZ GO BOIZ");
 
     if(m_parent)
     {
         for (auto& child : m_children) {
             dbgln("22222222 {} with {}", child->m_path, current);
-            if (child->m_path == searched_path) {
+            if (child->m_path == current) {
                 return child->find_node_or_extend_recursive(new_s);
             }
         }
@@ -90,12 +80,11 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
     }
     else
     {
-        for (auto& child : m_children) {
-            auto result = child->find_node_or_extend_recursive(searched_path);
-            if (result.has_value()) {
-                dbgln("Found in child");
-                return result;
-            }
+        if (!searched_path.starts_with("/"sv) && !m_parent) {
+            dbgln("Creating node for special path {}", searched_path);
+            auto new_child = create(searched_path, this);
+            m_children.append(new_child);
+            return new_child.ptr();
         }
 
         return create_recursively(searched_path);
