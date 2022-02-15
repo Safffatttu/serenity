@@ -30,7 +30,7 @@ void FileEventNode::dump_recursive(int level)
         sb.append("    ");
     }
 
-    dbgln("{}  {}{}:{}", this, sb.to_string(), m_path, count);
+    dbgln("{}  {}{}:{}", m_parent, sb.to_string(), m_path, count);
     for (auto& child: m_children)
     {
         child->dump_recursive(level + 1);
@@ -53,10 +53,18 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
         return this; // C.aa
     }
 
+    auto lex_path = LexicalPath(searched_path);
+    auto parts = lex_path.parts(); // { A B C.aa }
+    auto current = parts.take_first();
+
+    StringBuilder sb;
+    sb.join("/", parts);
+    auto new_s = sb.to_string();
+
     for (auto& child : m_children) {
-        dbgln("Comparing {} with {}", child->m_path, searched_path);
-        if (child->m_path == searched_path) {
-            return child.ptr();
+        dbgln("Comparing {} with {}", child->m_path, current);
+        if (child->m_path == current) {
+            return child->find_node_or_extend_recursive(new_s);
         }
     }
 
@@ -69,25 +77,24 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
 
     if(m_parent)
     {
-        auto lex_path = LexicalPath(searched_path);
-        auto parts = lex_path.parts(); // { A B C.aa }
-        auto current = parts.take_first();
-
-        StringBuilder sb;
-        sb.join("/", parts);
-        auto new_s = sb.to_string();
-
-
         for (auto& child : m_children) {
-            auto result = child->find_node_or_extend_recursive(new_s);
-            if (result.has_value()) {
-                dbgln("Found in child");
-                return result;
+            dbgln("22222222 {} with {}", child->m_path, current);
+            if (child->m_path == searched_path) {
+                return child->find_node_or_extend_recursive(new_s);
             }
         }
 
-        auto new_child = create_recursively(new_s);
-        m_children.append(new_child);
+
+        // for (auto& child : m_children) {
+        //     auto result = child->find_node_or_extend_recursive(new_s);
+        //     if (result.has_value()) {
+        //         dbgln("Found in child");
+        //         return result;
+        //     }
+        // }
+
+        auto new_child = create_recursively(searched_path);
+        // m_children.append(new_child);
         return new_child.ptr();
     }
     else
@@ -100,10 +107,7 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
             }
         }
 
-
-        auto new_child = create_recursively(searched_path);
-        m_children.append(new_child);
-        return new_child.ptr();
+        return create_recursively(searched_path);
     }
 }
 
@@ -115,7 +119,9 @@ NonnullRefPtr<FileEventNode> FileEventNode::create_recursively(String new_path)
 
     if (parts.size() == 1) {
         dbgln("Create leaf {} {}", new_path, this);
-        return FileEventNode::create(new_path, this);
+        auto new_node = FileEventNode::create(new_path, this);
+        m_children.append(new_node);
+        return new_node;
     } else {
         auto last = parts.take_first();
         dbgln("Create node {} {}", last, this);
@@ -125,6 +131,7 @@ NonnullRefPtr<FileEventNode> FileEventNode::create_recursively(String new_path)
         StringBuilder sb;
         sb.join("/", parts);
         auto new_s = sb.to_string();
+
         return new_node->create_recursively(new_s);
     }
 }
