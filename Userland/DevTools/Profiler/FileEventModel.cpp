@@ -38,19 +38,20 @@ void FileEventNode::dump_recursive(int level)
 }
 
 
-// /A/B/C
-
-// Vector { }
-
-// 1. C
-// 2. A
 Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String searched_path) // A/B/C
 {
     dbgln("find_node_or_extend_recursive {} {}", searched_path, full_path());
 
+    dbgln("simple check {} {}", searched_path, m_path);
     if (searched_path == m_path) {
         dbgln("found");
-        return this; // C.aa
+        return this;
+    }
+
+    if (searched_path == ""sv)
+    {
+        dbgln("Found me hehe");
+        return this;
     }
 
     auto lex_path = LexicalPath(searched_path);
@@ -84,17 +85,7 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
             }
         }
 
-
-        // for (auto& child : m_children) {
-        //     auto result = child->find_node_or_extend_recursive(new_s);
-        //     if (result.has_value()) {
-        //         dbgln("Found in child");
-        //         return result;
-        //     }
-        // }
-
         auto new_child = create_recursively(searched_path);
-        // m_children.append(new_child);
         return new_child.ptr();
     }
     else
