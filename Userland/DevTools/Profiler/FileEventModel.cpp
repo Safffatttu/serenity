@@ -40,11 +40,11 @@ void FileEventNode::dump_recursive(int level)
 
 Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String searched_path) // A/B/C
 {
-    dbgln("find_node_or_extend_recursive {} {}", searched_path, full_path());
+    // dbgln("find_node_or_extend_recursive {} {}", searched_path, full_path());
 
     if (searched_path == ""sv)
     {
-        dbgln("Found me hehe");
+        // dbgln("Found me hehe");
         return this;
     }
 
@@ -57,19 +57,19 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
     auto new_s = sb.to_string();
 
     for (auto& child : m_children) {
-        dbgln("Comparing {} with {}", child->m_path, current);
+        // dbgln("Comparing {} with {}", child->m_path, current);
         if (child->m_path == current) {
-            dbgln("Went there");
+            // dbgln("Went there");
             return child->find_node_or_extend_recursive(new_s);
         }
     }
 
-    dbgln("Not found anything LETZ GO BOIZ");
+    // dbgln("Not found anything LETZ GO BOIZ");
 
     if(m_parent)
     {
         for (auto& child : m_children) {
-            dbgln("22222222 {} with {}", child->m_path, current);
+            // dbgln("22222222 {} with {}", child->m_path, current);
             if (child->m_path == current) {
                 return child->find_node_or_extend_recursive(new_s);
             }
@@ -81,7 +81,7 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
     else
     {
         if (!searched_path.starts_with("/"sv) && !m_parent) {
-            dbgln("Creating node for special path {}", searched_path);
+            // dbgln("Creating node for special path {}", searched_path);
             auto new_child = create(searched_path, this);
             m_children.append(new_child);
             return new_child.ptr();
@@ -93,7 +93,7 @@ Optional<FileEventNode*> FileEventNode::find_node_or_extend_recursive(String sea
 
 NonnullRefPtr<FileEventNode> FileEventNode::create_recursively(String new_path)
 {
-    dbgln("Creating recurse {}", new_path);
+    // dbgln("Creating recurse {}", new_path);
     auto lex_path = LexicalPath(new_path);
     auto parts = lex_path.parts(); // { A B C.aa }
 
@@ -176,7 +176,7 @@ GUI::ModelIndex FileEventModel::parent_index(GUI::ModelIndex const& index) const
 int FileEventModel::row_count(GUI::ModelIndex const& index) const
 {
     if (!index.is_valid())
-        return 1;
+        return m_profile.file_event_nodes()->children().size();
     auto& node = *static_cast<FileEventNode*>(index.internal_data());
     return node.children().size();
 }
