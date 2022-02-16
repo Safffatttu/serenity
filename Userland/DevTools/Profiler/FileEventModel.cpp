@@ -22,29 +22,6 @@ FileEventModel::~FileEventModel()
 {
 }
 
-// void FileEventNode::dump_recursive(int level)
-// {
-//     return;
-//     StringBuilder sb;
-//     for (int i = 0; i < level; i++) {
-//         sb.append("    ");
-//     }
-
-//     dbgln("{}->{}  {}{}:{}", this, m_parent, sb.to_string(), m_path, m_count);
-//     for (auto& child : m_children) {
-//         child->dump_recursive(level + 1);
-//     }
-// }
-//
-// String FileEventNode::full_path() const
-// {
-//     if (m_parent) {
-//         return String::formatted("{}{}", m_parent->m_path, m_path);
-//     } else {
-//         return m_path;
-//     }
-// }
-
 FileEventNode& FileEventNode::find_node_or_extend_recursive(String const& searched_path)
 {
     // TODO: Optimize this function.
@@ -76,9 +53,8 @@ FileEventNode& FileEventNode::find_node_or_extend_recursive(String const& search
         return create_recursively(searched_path);
     } else {
         if (!searched_path.starts_with("/"sv) && !m_parent) {
-            auto new_child = create(searched_path, this);
-            m_children.append(new_child);
-            return *new_child.ptr();
+            m_children.append(create(searched_path, this));
+            return *m_children.last();
         }
 
         return create_recursively(searched_path);
@@ -172,7 +148,9 @@ String FileEventModel::column_name(int column) const
     case Column::Path:
         return "Path";
     case Column::Count:
-        return "Count";
+        return "Event Count";
+    case Column::Duration:
+        return "Duration[ms]";
     default:
         VERIFY_NOT_REACHED();
         return {};
@@ -198,37 +176,14 @@ GUI::Variant FileEventModel::data(GUI::ModelIndex const& index, GUI::ModelRole r
             return node->path();
         }
 
+        if(index.column() == Column::Duration) {
+            return node->duration();
+        }
+
         return {};
     }
 
     return {};
-}
-
-Vector<GUI::ModelIndex> FileEventModel::matches(StringView searching, unsigned flags, GUI::ModelIndex const& parent)
-{
-    // dbgln("MATCHES??");
-    (void)flags;
-    (void)parent;
-    (void)searching;
-    // RemoveReference<decltype(m_profile.file_event_nodes())>* nodes { nullptr };
-
-    // if (!parent.is_valid())
-    //     nodes = &m_profile.file_event_nodes();
-    // else
-    //     nodes = &static_cast<FileEventNode*>(parent.internal_data())->children();
-
-    Vector<GUI::ModelIndex> found_indices;
-    // for (auto it = nodes->begin(); !it.is_end(); ++it) {
-    //     GUI::ModelIndex index = this->index(it.index(), Path, parent);
-    //     if (!string_matches(data(index, GUI::ModelRole::Display).as_string(), searching, flags))
-    //         continue;
-
-    //     found_indices.append(index);
-    //     if (flags & FirstMatchOnly)
-    //         break;
-    // }
-
-    return found_indices;
 }
 
 }

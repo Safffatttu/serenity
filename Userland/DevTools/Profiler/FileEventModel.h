@@ -33,22 +33,25 @@ public:
 
     void for_each_parent_node(Function<void(FileEventNode&)> callback);
 
-    // String full_path() const;
-    // void dump_recursive(int level = 0);
-
     String const& path() const { return m_path; }
 
     void increment_count() { m_count++; }
     u64 count() const { return m_count; }
 
+    void add_to_duration(u64 duration) { duration += duration; }
+    u64 duration() const { return m_duration; }
+
 private:
     FileEventNode(String const& path, FileEventNode* parent = nullptr)
         : m_path(path)
         , m_count(0)
+        , m_duration(0)
         , m_parent(parent) {};
 
     String m_path;
     u64 m_count;
+    u64 m_duration;
+
     Vector<NonnullRefPtr<FileEventNode>> m_children;
     FileEventNode* m_parent = nullptr;
 };
@@ -63,6 +66,7 @@ public:
     enum Column {
         Path,
         Count,
+        Duration,
         __Count
     };
 
@@ -77,7 +81,6 @@ public:
     virtual int tree_column() const override { return Column::Path; }
     virtual bool is_column_sortable(int) const override { return false; }
     virtual bool is_searchable() const override { return true; }
-    virtual Vector<GUI::ModelIndex> matches(StringView, unsigned flags, GUI::ModelIndex const&) override;
 
 private:
     explicit FileEventModel(Profile&);

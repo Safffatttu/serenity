@@ -212,8 +212,10 @@ void Profile::rebuild_tree()
             auto const& read_event = event.data.get<Event::ReadData>();
             auto& event_node = m_file_event_nodes->find_node_or_extend_recursive(read_event.path);
 
-            event_node.for_each_parent_node([](FileEventNode& node) {
+            event_node.for_each_parent_node([&](FileEventNode& node) {
                 node.increment_count();
+                auto const duration = event.timestamp - read_event.start_timestamp;
+                node.add_to_duration(duration);
             });
         }
     }
