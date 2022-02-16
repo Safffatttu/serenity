@@ -23,7 +23,9 @@
 			"string_view": "cpp",
 			"source_location": "cpp",
 			"array": "cpp",
-			"rope": "cpp"
+			"rope": "cpp",
+			"any": "cpp",
+			"optional": "cpp"
 		}
 	}
 }

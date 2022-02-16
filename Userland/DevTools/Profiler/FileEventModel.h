@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <AK/Function.h>
 #include <AK/LexicalPath.h>
 #include <AK/String.h>
 #include <LibGUI/Model.h>
@@ -21,35 +22,33 @@ public:
         return adopt_ref(*new FileEventNode(path, parent));
     }
 
-    FileEventNode(String const& path, FileEventNode* parent = nullptr)
-        : m_path(path)
-        , count(1)
-        , m_parent(parent) {
-            // dbgln("Created this:{} parent:{} path:{}", this, parent, full_path());
-        };
+    FileEventNode& find_node_or_extend_recursive(String const&);
 
-    Optional<FileEventNode*> find_node_or_extend_recursive(String);
-
-    Vector<NonnullRefPtr<FileEventNode>> const& children() { return m_children; };
-    Vector<NonnullRefPtr<FileEventNode>> const& children() const { return m_children; };
+    Vector<NonnullRefPtr<FileEventNode>> const& children() { return m_children; }
+    Vector<NonnullRefPtr<FileEventNode>> const& children() const { return m_children; }
 
     FileEventNode* parent() { return m_parent; };
 
-    NonnullRefPtr<FileEventNode> create_recursively(String);
+    FileEventNode& create_recursively(String);
 
-    String full_path()
-    {
-        if (m_parent) {
-            return String::formatted("{}{}", m_parent->m_path, m_path);
-        } else {
-            return m_path;
-        }
-    }
+    void for_each_parent_node(Function<void(FileEventNode&)> callback);
 
-    void dump_recursive(int level = 0);
+    // String full_path() const;
+    // void dump_recursive(int level = 0);
+
+    String const& path() const { return m_path; }
+
+    void increment_count() { m_count++; }
+    u64 count() const { return m_count; }
+
+private:
+    FileEventNode(String const& path, FileEventNode* parent = nullptr)
+        : m_path(path)
+        , m_count(0)
+        , m_parent(parent) {};
 
     String m_path;
-    u64 count;
+    u64 m_count;
     Vector<NonnullRefPtr<FileEventNode>> m_children;
     FileEventNode* m_parent = nullptr;
 };
