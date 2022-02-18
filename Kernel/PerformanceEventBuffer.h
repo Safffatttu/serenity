@@ -140,6 +140,8 @@ private:
     template<typename Serializer>
     ErrorOr<void> to_json_impl(Serializer&) const;
 
+    // Experimental YO
+    mutable RecursiveSpinlock m_lock;
     PerformanceEvent& at(size_t index);
 
     size_t m_count { 0 };

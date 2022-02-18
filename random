@@ -1,0 +1,15 @@
+    struct [[gnu::packed]] ResultPod {
+        bool success;
+        union {
+            FlatPtr result;
+            int error_code;
+        };
+    };
+
+    ResultPod result;
+
+
+	        if (arg6.is_error())
+            event.data.read.result.error_code = arg6.error().code();
+        else
+            event.data.read.result.result = arg6.value();

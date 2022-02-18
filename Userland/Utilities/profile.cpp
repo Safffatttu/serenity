@@ -77,6 +77,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     if (!seen_event_type_arg)
         event_mask |= PERF_EVENT_SAMPLE;
+    event_mask = 123456789;
 
     if (pid_argument || all_processes) {
         if (!(enable ^ disable ^ wait ^ free)) {
@@ -114,7 +115,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
         cmd_argv.append(part.characters());
 
     cmd_argv.append(nullptr);
-
+    event_mask = 123456789;
     dbgln("Enabling profiling for PID {}", getpid());
     TRY(Core::System::profiling_enable(getpid(), event_mask));
     if (execvp(cmd_argv[0], const_cast<char**>(cmd_argv.data())) < 0) {

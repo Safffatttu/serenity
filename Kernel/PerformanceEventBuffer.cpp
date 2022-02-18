@@ -81,6 +81,8 @@ ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, Threa
 ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, ThreadID tid,
     FlatPtr ip, FlatPtr bp, int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FlatPtr arg4, u64 arg5, ErrorOr<FlatPtr> arg6)
 {
+    SpinlockLocker locker(m_lock);
+
     if (count() >= capacity())
         return ENOBUFS;
 
@@ -361,6 +363,7 @@ ErrorOr<void> PerformanceEventBuffer::add_process(const Process& process, Proces
 
 ErrorOr<FlatPtr> PerformanceEventBuffer::register_string(NonnullOwnPtr<KString> string)
 {
+    SpinlockLocker locker(m_lock);
     FlatPtr string_id = m_strings.size();
     TRY(m_strings.try_set(move(string)));
     return string_id;
