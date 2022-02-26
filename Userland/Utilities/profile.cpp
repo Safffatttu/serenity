@@ -22,9 +22,8 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     bool enable = false;
     bool disable = false;
     bool all_processes = false;
-    u64 event_mask = PERF_EVENT_MMAP | PERF_EVENT_MUNMAP | PERF_EVENT_PROCESS_CREATE
-        | PERF_EVENT_PROCESS_EXEC | PERF_EVENT_PROCESS_EXIT | PERF_EVENT_THREAD_CREATE | PERF_EVENT_THREAD_EXIT
-        | PERF_EVENT_SIGNPOST;
+    u64 event_mask = PERF_EVENT_PROCESS_CREATE
+        | PERF_EVENT_PROCESS_EXEC | PERF_EVENT_PROCESS_EXIT | PERF_EVENT_THREAD_CREATE | PERF_EVENT_THREAD_EXIT;
     bool seen_event_type_arg = false;
 
     args_parser.add_option(pid_argument, "Target PID", nullptr, 'p', "PID");
@@ -77,7 +76,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     if (!seen_event_type_arg)
         event_mask |= PERF_EVENT_SAMPLE;
-    event_mask = 123456789;
+    // event_mask = 123456789;
 
     if (pid_argument || all_processes) {
         if (!(enable ^ disable ^ wait ^ free)) {
@@ -115,7 +114,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
         cmd_argv.append(part.characters());
 
     cmd_argv.append(nullptr);
-    event_mask = 123456789;
+    // event_mask = 123456789;
     dbgln("Enabling profiling for PID {}", getpid());
     TRY(Core::System::profiling_enable(getpid(), event_mask));
     if (execvp(cmd_argv[0], const_cast<char**>(cmd_argv.data())) < 0) {

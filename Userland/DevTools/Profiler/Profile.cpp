@@ -260,6 +260,7 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
     for (FlatPtr string_id = 0; string_id < strings_value->as_array().size(); ++string_id) {
         auto const& value = strings_value->as_array().at(string_id);
         profile_strings.set(string_id, value.to_string());
+        // dbgln("Added string {}:{}", string_id, value.to_string());
     }
 
     auto const* events_value = object.get_ptr("events");
@@ -326,6 +327,7 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
             };
             continue;
         } else if (type_string == "process_create"sv) {
+            dbgln("{}", perf_event.to_string());
             auto parent_pid = perf_event.get("parent_pid"sv).to_number<pid_t>();
             auto executable = perf_event.get("executable"sv).to_string();
             event.data = Event::ProcessCreateData {
@@ -345,12 +347,32 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
             all_processes.append(move(sampled_process));
             continue;
         } else if (type_string == "process_exec"sv) {
+            dbgln("{}", perf_event.to_string());
             auto executable = perf_event.get("executable"sv).to_string();
             event.data = Event::ProcessExecData {
                 .executable = executable,
             };
 
-            auto* old_process = current_processes.get(event.pid).value();
+            dbgln("Print current processes");
+
+            for (const auto& p : current_processes) {
+                dbgln("{} {}:{}", p.key, p.value->pid, p.value->executable);
+            }
+
+            dbgln("Requesting running process with id {}", event.pid);
+            dbgln("     Found running process with id {}", current_processes.contains(event.pid));
+            auto maybe_old_process = current_processes.get(event.pid);
+            dbgln("Has value {}", maybe_old_process.has_value());
+
+            struct OPT_Struct {
+                // alignas(Process*) u8 m_storage[sizeof(Process*)];
+                Process* m_storage;
+                bool m_has_value { false };
+            };
+
+            auto* dd = reinterpret_cast<OPT_Struct*>(&maybe_old_process);
+            dbgln("YO: {} {}",dd->m_storage, dd->m_has_value );
+            auto* old_process = reinterpret_cast<Process*>(dd->m_storage); // maybe_old_process.value();
             old_process->end_valid = event.serial;
 
             current_processes.remove(event.pid);
@@ -367,7 +389,20 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
             all_processes.append(move(sampled_process));
             continue;
         } else if (type_string == "process_exit"sv) {
-            auto* old_process = current_processes.get(event.pid).value();
+            dbgln("{}", perf_event.to_string());
+            auto maybe_old_process = current_processes.get(event.pid);
+            dbgln("Has value {}", maybe_old_process.has_value());
+
+            struct OPT_Struct {
+                // alignas(Process*) u8 m_storage[sizeof(Process*)];
+                Process* m_storage;
+                bool m_has_value { false };
+            };
+
+            auto* dd = reinterpret_cast<OPT_Struct*>(&maybe_old_process);
+            dbgln("YO: {} {}",dd->m_storage, dd->m_has_value );
+            auto* old_process = reinterpret_cast<Process*>(dd->m_storage); // maybe_old_process.value();
+            // auto* old_process = current_processes.get(event.pid).value();
             old_process->end_valid = event.serial;
 
             current_processes.remove(event.pid);
@@ -388,6 +423,7 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
             continue;
         } else if (type_string == "read"sv) {
             const auto string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
+            dbgln("{}", perf_event.to_string());
             event.data = Event::ReadData {
                 .fd = perf_event.get("fd"sv).to_number<int>(),
                 .size = perf_event.get("size"sv).to_number<size_t>(),

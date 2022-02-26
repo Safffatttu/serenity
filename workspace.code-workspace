@@ -26,7 +26,11 @@
 			"rope": "cpp",
 			"any": "cpp",
 			"optional": "cpp",
-			"span": "cpp"
+			"span": "cpp",
+			"system_error": "cpp",
+			"regex": "cpp",
+			"*.def": "cpp",
+			"sstream": "cpp"
 		}
 	}
 }

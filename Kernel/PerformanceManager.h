@@ -136,8 +136,14 @@ public:
         if (event_buffer == nullptr)
             return;
 
-        size_t filepath_string_index;
-
+        size_t filepath_string_index = 0;
+        (void)file_description;
+        // (void)filepath_string_index;
+        // (void)fd;
+        // (void)size;
+        // (void)file_description;
+        // (void)start_timestamp;
+        // (void)result;
         if (auto path = file_description.original_absolute_path(); !path.is_error()) {
             auto registered_result = event_buffer->register_string(move(path.value()));
             if (registered_result.is_error())

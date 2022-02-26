@@ -170,6 +170,7 @@ ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, Threa
     case PERF_EVENT_READ:
         event.data.read.fd = arg1;
         event.data.read.size = arg2;
+        dbgln("GOT FILENAME INDEX {} ", arg4);
         event.data.read.filename_index = arg4;
         event.data.read.start_timestamp = arg5;
         event.data.read.success = !arg6.is_error();
@@ -191,6 +192,7 @@ ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, Threa
 
 PerformanceEvent& PerformanceEventBuffer::at(size_t index)
 {
+    SpinlockLocker locker(m_lock);
     VERIFY(index < capacity());
     auto* events = reinterpret_cast<PerformanceEvent*>(m_buffer->data());
     return events[index];
@@ -199,9 +201,11 @@ PerformanceEvent& PerformanceEventBuffer::at(size_t index)
 template<typename Serializer>
 ErrorOr<void> PerformanceEventBuffer::to_json_impl(Serializer& object) const
 {
+    SpinlockLocker locker(m_lock);
     {
         auto strings = object.add_array("strings");
         for (auto const& it : m_strings) {
+            dbgln("Add string to json {}", it->view());
             strings.add(it->view());
         }
     }
@@ -292,6 +296,7 @@ ErrorOr<void> PerformanceEventBuffer::to_json_impl(Serializer& object) const
             event_object.add("fd", event.data.read.fd);
             event_object.add("size"sv, event.data.read.size);
             event_object.add("filename_index"sv, event.data.read.filename_index);
+            dbgln("FKN GENERATING FKN JSON with filename_index = {}", event.data.read.filename_index);
             event_object.add("start_timestamp"sv, event.data.read.start_timestamp);
             event_object.add("success"sv, event.data.read.success);
             break;
@@ -363,10 +368,40 @@ ErrorOr<void> PerformanceEventBuffer::add_process(const Process& process, Proces
 
 ErrorOr<FlatPtr> PerformanceEventBuffer::register_string(NonnullOwnPtr<KString> string)
 {
-    SpinlockLocker locker(m_lock);
+    // this function uses Traits<Nonnullownptr<KSting> magic, nevertheless it produces different string_id's for the same string.
+    // using simple vector solves this problem
+
+    // SpinlockLocker locker(m_lock);
+
+    dbgln("Register_string start {}", string);
+
+#if 1
+    for (size_t i = 0; i < m_strings.size(); i++){
+        auto& current = m_strings.at(i);
+        if (current->view() == string->view())
+            return i;
+    }
+
+    m_strings.append(move(string));
+
+    dbgln("Success {}", m_strings.size() - 1);
+    return m_strings.size() - 1;
+#else
+    // FlatPtr string_id = m_strings.size();
+    // TRY(m_strings.try_set(move(string)));
+    // return string_id;
+
     FlatPtr string_id = m_strings.size();
-    TRY(m_strings.try_set(move(string)));
+    auto result = m_strings.try_set(move(string), AK::HashSetExistingEntryBehavior::Keep);
+
+    if(result.is_error()) { return result.error(); }
+
+    dbgln("{}", (int)result.value());
+
+    dbgln("Success {}", string_id);
     return string_id;
+#endif
+
 }
 
 }

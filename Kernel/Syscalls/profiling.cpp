@@ -29,7 +29,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, Userspace<u64 const*> 
         if (!is_superuser())
             return EPERM;
         ScopedCritical critical;
-        g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE | PERF_EVENT_MMAP;
+        g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE;
         if (g_global_perf_events) {
             g_global_perf_events->clear();
         } else {
@@ -46,6 +46,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, Userspace<u64 const*> 
         g_profiling_all_threads = true;
         PerformanceManager::add_process_created_event(*Scheduler::colonel());
         Process::for_each([](auto& process) {
+            dbgln("For process {}:{}", process.pid(), process.name());
             PerformanceManager::add_process_created_event(process);
             return IterationDecision::Continue;
         });
@@ -62,7 +63,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, Userspace<u64 const*> 
     if (!is_superuser() && process->uid() != euid())
         return EPERM;
     SpinlockLocker lock(g_profiling_lock);
-    g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE | PERF_EVENT_MMAP;
+    g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE;
     // event_mask = PERF_EVENT_READ;
     // dbgln("YOYOYOYO {}", event_mask);
     process->set_profiling(true);

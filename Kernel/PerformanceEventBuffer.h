@@ -147,7 +147,9 @@ private:
     size_t m_count { 0 };
     NonnullOwnPtr<KBuffer> m_buffer;
 
-    HashTable<NonnullOwnPtr<KString>> m_strings;
+    // HashTable<NonnullOwnPtr<KString>> m_strings;
+    Vector<NonnullOwnPtr<KString>> m_strings;
+
 };
 
 extern bool g_profiling_all_threads;
