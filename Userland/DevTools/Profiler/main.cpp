@@ -261,6 +261,11 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     filesystem_events_tree_view->set_column_headers_visible(true);
     filesystem_events_tree_view->set_selection_behavior(GUI::TreeView::SelectionBehavior::SelectRows);
     filesystem_events_tree_view->set_model(profile->file_event_model());
+    filesystem_events_tree_view->set_column_visible(FileEventModel::Column::OpenDuration, false);
+    filesystem_events_tree_view->set_column_visible(FileEventModel::Column::CloseDuration, false);
+    filesystem_events_tree_view->set_column_visible(FileEventModel::Column::ReadvDuration, false);
+    filesystem_events_tree_view->set_column_visible(FileEventModel::Column::ReadDuration, false);
+    filesystem_events_tree_view->set_column_visible(FileEventModel::Column::PreadDuration, false);
 
     auto file_menu = TRY(window->try_add_menu("&File"));
     TRY(file_menu->try_add_action(GUI::CommonActions::make_quit_action([&](auto&) { app->quit(); })));

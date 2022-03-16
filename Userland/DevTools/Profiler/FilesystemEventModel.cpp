@@ -22,6 +22,16 @@ FileEventModel::~FileEventModel()
 {
 }
 
+u64 FileEventNode::total_count() const
+{
+    return m_open.count + m_close.count + m_readv.count + m_read.count + m_pread.count;
+}
+
+u64 FileEventNode::total_duration() const
+{
+    return m_open.duration + m_close.duration + m_readv.duration + m_read.duration + m_pread.duration;
+}
+
 FileEventNode& FileEventNode::find_or_create_node(String const& searched_path)
 {
     // TODO: Optimize this function.
@@ -147,10 +157,30 @@ String FileEventModel::column_name(int column) const
     switch (column) {
     case Column::Path:
         return "Path";
-    case Column::Count:
-        return "Event Count";
-    case Column::Duration:
-        return "Duration [ms]";
+    case Column::TotalCount:
+        return "Total Count";
+    case Column::TotalDuration:
+        return "Total Duration [ms]";
+    case Column::OpenCount:
+        return "Open Count";
+    case Column::OpenDuration:
+        return "Open Duration";
+    case Column::CloseCount:
+        return "Close Count";
+    case Column::CloseDuration:
+        return "Close Duration";
+    case Column::ReadvCount:
+        return "Readv Count";
+    case Column::ReadvDuration:
+        return "Readv Duration";
+    case Column::ReadCount:
+        return "Read Count";
+    case Column::ReadDuration:
+        return "Read Duration";
+    case Column::PreadCount:
+        return "Pread Count";
+    case Column::PreadDuration:
+        return "Pread Duration";
     default:
         VERIFY_NOT_REACHED();
         return {};
@@ -168,19 +198,36 @@ GUI::Variant FileEventModel::data(GUI::ModelIndex const& index, GUI::ModelRole r
     auto* node = static_cast<FileEventNode*>(index.internal_data());
 
     if (role == GUI::ModelRole::Display) {
-        if (index.column() == Column::Count) {
-            return node->count();
-        }
-
-        if (index.column() == Column::Path) {
+        switch (index.column()) {
+        case Column::Path:
             return node->path();
+        case Column::TotalCount:
+            return node->total_count();
+        case Column::TotalDuration:
+            return node->total_duration();
+        case Column::OpenCount:
+            return node->open().count;
+        case Column::OpenDuration:
+            return node->open().duration;
+        case Column::CloseCount:
+            return node->close().count;
+        case Column::CloseDuration:
+            return node->close().duration;
+        case Column::ReadvCount:
+            return node->readv().count;
+        case Column::ReadvDuration:
+            return node->readv().duration;
+        case Column::ReadCount:
+            return node->read().count;
+        case Column::ReadDuration:
+            return node->read().duration;
+        case Column::PreadCount:
+            return node->pread().count;
+        case Column::PreadDuration:
+            return node->pread().duration;
+        default:
+            return {};
         }
-
-        if (index.column() == Column::Duration) {
-            return node->duration();
-        }
-
-        return {};
     }
 
     return {};

@@ -208,19 +208,54 @@ void Profile::rebuild_tree()
                 }
             }
         }
+        if (event.data.has<Event::FilesystemEventData>()) {
+            auto const& filesystem_event = event.data.get<Event::FilesystemEventData>();
+            const auto& path = filesystem_event.data.visit(
+                [&](Event::OpenEventData const& data) {
+                    return data.path;
+                },
+                [&](Event::CloseEventData const& data) {
+                    return data.path;
+                },
+                [&](Event::ReadvEventData const& data) {
+                    return data.path;
+                },
+                [&](Event::ReadEventData const& data) {
+                    return data.path;
+                },
+                [&](Event::PreadEventData const& data) {
+                    return data.path;
+                });
 
-        if (event.data.has<Event::ReadData>()) {
-            auto const& read_event = event.data.get<Event::ReadData>();
-            auto& event_node = m_file_event_nodes->find_or_create_node(read_event.path);
+            auto& event_node = m_file_event_nodes->find_or_create_node(path);
 
             event_node.for_each_parent_node([&](FileEventNode& node) {
-                node.increment_count();
-
                 // Fixme: Currently events record 'timestamp' and 'start_timestamp' in ms resolution,
                 //        which results in most durations equal to zero. Increasing the resolution should
                 //        make the information more accurate.
-                auto const duration = event.timestamp - read_event.start_timestamp;
-                node.add_to_duration(duration);
+                auto const duration = event.timestamp - filesystem_event.start_timestamp;
+
+                filesystem_event.data.visit(
+                    [&](Event::OpenEventData const&) {
+                        node.open().duration += duration;
+                        node.open().count++;
+                    },
+                    [&](Event::CloseEventData const&) {
+                        node.close().duration += duration;
+                        node.close().count++;
+                    },
+                    [&](Event::ReadvEventData const&) {
+                        node.readv().duration += duration;
+                        node.readv().count++;
+                    },
+                    [&](Event::ReadEventData const&) {
+                        node.read().duration += duration;
+                        node.read().count++;
+                    },
+                    [&](Event::PreadEventData const&) {
+                        node.pread().duration += duration;
+                        node.pread().count++;
+                    });
             });
         }
     }
@@ -387,15 +422,56 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
             if (it != current_processes.end())
                 it->value->handle_thread_exit(event.tid, event.serial);
             continue;
-        } else if (type_string == "read"sv) {
-            auto const string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
-            event.data = Event::ReadData {
-                .fd = perf_event.get("fd"sv).to_number<int>(),
-                .size = perf_event.get("size"sv).to_number<size_t>(),
-                .path = profile_strings.get(string_index).value(),
+        } else if (type_string == "filesystem"sv) {
+            Event::FilesystemEventData fsdata {
                 .start_timestamp = perf_event.get("start_timestamp"sv).to_number<size_t>(),
-                .success = perf_event.get("success"sv).to_bool()
+                .data = Event::OpenEventData {},
             };
+
+            const auto filesystem_event_type = perf_event.get("filesystem_type"sv).to_string();
+            if (filesystem_event_type == "open"sv) {
+                const auto string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
+                const auto filename = profile_strings.get(string_index).value().view();
+                fsdata.data = Event::OpenEventData {
+                    .dirfd = perf_event.get("dirfd"sv).to_int(),
+                    .path = filename,
+                    .options = perf_event.get("options"sv).to_int(),
+                    .mode = perf_event.get("mode"sv).to_u64(),
+                };
+            } else if (filesystem_event_type == "close"sv) {
+                const auto string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
+                const auto filename = profile_strings.get(string_index).value().view();
+                fsdata.data = Event::CloseEventData {
+                    .fd = perf_event.get("fd"sv).to_int(),
+                    .path = filename,
+                };
+            } else if (filesystem_event_type == "readv"sv) {
+                const auto string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
+                const auto filename = profile_strings.get(string_index).value().view();
+                fsdata.data = Event::ReadvEventData {
+                    .fd = perf_event.get("fd"sv).to_int(),
+                    .path = filename,
+                };
+            } else if (filesystem_event_type == "read"sv) {
+                const auto string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
+                const auto filename = profile_strings.get(string_index).value().view();
+                fsdata.data = Event::ReadEventData {
+                    .fd = perf_event.get("fd"sv).to_int(),
+                    .path = filename,
+                };
+            } else if (filesystem_event_type == "pread"sv) {
+                const auto string_index = perf_event.get("filename_index"sv).to_number<FlatPtr>();
+                const auto filename = profile_strings.get(string_index).value().view();
+                fsdata.data = Event::PreadEventData {
+                    .fd = perf_event.get("fd"sv).to_int(),
+                    .path = filename,
+                    .buffer_ptr = perf_event.get("buffer_ptr"sv).to_number<FlatPtr>(),
+                    .size = perf_event.get("size"sv).to_number<size_t>(),
+                    .offset = perf_event.get("offset"sv).to_number<off_t>(),
+                };
+            }
+
+            event.data = fsdata;
         } else {
             dbgln("Unknown event type '{}'", type_string);
             VERIFY_NOT_REACHED();

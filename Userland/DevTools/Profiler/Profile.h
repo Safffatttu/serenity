@@ -223,15 +223,45 @@ public:
             pid_t parent_tid {};
         };
 
-        struct ReadData {
-            int fd;
-            size_t size;
+        // Based on Syscall::SC_open_params
+        struct OpenEventData {
+            int dirfd;
             String path;
-            size_t start_timestamp;
-            bool success;
+            int options;
+            u64 mode;
         };
 
-        Variant<std::nullptr_t, SampleData, MallocData, FreeData, SignpostData, MmapData, MunmapData, ProcessCreateData, ProcessExecData, ThreadCreateData, ReadData> data { nullptr };
+        struct CloseEventData {
+            int fd;
+            String path;
+        };
+
+        struct ReadvEventData {
+            int fd;
+            String path;
+            // struct iovec* iov; // TODO: Implement
+            // int iov_count; // TODO: Implement
+        };
+
+        struct ReadEventData {
+            int fd;
+            String path;
+        };
+
+        struct PreadEventData {
+            int fd;
+            String path;
+            FlatPtr buffer_ptr;
+            size_t size;
+            off_t offset;
+        };
+
+        struct FilesystemEventData {
+            size_t start_timestamp;
+            Variant<OpenEventData, CloseEventData, ReadvEventData, ReadEventData, PreadEventData> data;
+        };
+
+        Variant<std::nullptr_t, SampleData, MallocData, FreeData, SignpostData, MmapData, MunmapData, ProcessCreateData, ProcessExecData, ThreadCreateData, FilesystemEventData> data { nullptr };
     };
 
     Vector<Event> const& events() const { return m_events; }
