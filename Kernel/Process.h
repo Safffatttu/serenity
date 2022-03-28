@@ -573,7 +573,11 @@ private:
 
     ErrorOr<void> remap_range_as_stack(FlatPtr address, size_t size);
 
+    ErrorOr<FlatPtr> open_impl(Userspace<const Syscall::SC_open_params*>);
+    ErrorOr<FlatPtr> close_impl(int fd);
     ErrorOr<FlatPtr> read_impl(int fd, Userspace<u8*> buffer, size_t size);
+    ErrorOr<FlatPtr> pread_impl(int fd, Userspace<u8*>, size_t, Userspace<off_t const*>);
+    ErrorOr<FlatPtr> readv_impl(int fd, Userspace<const struct iovec*> iov, int iov_count);
 
 public:
     NonnullRefPtr<ProcessProcFSTraits> procfs_traits() const { return *m_procfs_traits; }

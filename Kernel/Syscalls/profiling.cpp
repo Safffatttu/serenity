@@ -27,9 +27,9 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, Userspace<u64 const*> 
 
     if (pid == -1) {
         if (!is_superuser())
-            return EPERM;
+            {dbgln("1"); return EPERM;}
         ScopedCritical critical;
-        g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE | PERF_EVENT_MMAP;
+        g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE;
         if (g_global_perf_events) {
             g_global_perf_events->clear();
         } else {
@@ -46,10 +46,12 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, Userspace<u64 const*> 
         g_profiling_all_threads = true;
         PerformanceManager::add_process_created_event(*Scheduler::colonel());
         Process::for_each([](auto& process) {
+            dbgln("For process {}:{}", process.pid(), process.name());
             PerformanceManager::add_process_created_event(process);
             return IterationDecision::Continue;
         });
         g_profiling_event_mask = event_mask;
+        dbgln("Started profiling with {}", g_profiling_event_mask);
         return 0;
     }
 
@@ -59,9 +61,11 @@ ErrorOr<FlatPtr> Process::sys$profiling_enable(pid_t pid, Userspace<u64 const*> 
     if (process->is_dead())
         return ESRCH;
     if (!is_superuser() && process->uid() != euid())
-        return EPERM;
+        {dbgln("2"); return EPERM;}
     SpinlockLocker lock(g_profiling_lock);
-    g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE | PERF_EVENT_MMAP;
+    g_profiling_event_mask = PERF_EVENT_PROCESS_CREATE | PERF_EVENT_THREAD_CREATE;
+    // event_mask = PERF_EVENT_FILESYSTEM;
+    // dbgln("YOYOYOYO {}", event_mask);
     process->set_profiling(true);
     if (!process->create_perf_events_buffer_if_needed()) {
         process->set_profiling(false);
@@ -82,7 +86,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_disable(pid_t pid)
 
     if (pid == -1) {
         if (!is_superuser())
-            return EPERM;
+            {dbgln("2"); return EPERM;}
         ScopedCritical critical;
         if (!TimeManagement::the().disable_profile_timer())
             return ENOTSUP;
@@ -94,7 +98,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_disable(pid_t pid)
     if (!process)
         return ESRCH;
     if (!is_superuser() && process->uid() != euid())
-        return EPERM;
+        {dbgln("3"); return EPERM;}
     SpinlockLocker lock(g_profiling_lock);
     if (!process->is_profiling())
         return EINVAL;
@@ -112,7 +116,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_free_buffer(pid_t pid)
 
     if (pid == -1) {
         if (!is_superuser())
-            return EPERM;
+            {dbgln("4"); return EPERM;}
 
         OwnPtr<PerformanceEventBuffer> perf_events;
 
@@ -130,7 +134,7 @@ ErrorOr<FlatPtr> Process::sys$profiling_free_buffer(pid_t pid)
     if (!process)
         return ESRCH;
     if (!is_superuser() && process->uid() != euid())
-        return EPERM;
+        {dbgln("5"); return EPERM;}
     SpinlockLocker lock(g_profiling_lock);
     if (process->is_profiling())
         return EINVAL;

@@ -22,9 +22,8 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     bool enable = false;
     bool disable = false;
     bool all_processes = false;
-    u64 event_mask = PERF_EVENT_MMAP | PERF_EVENT_MUNMAP | PERF_EVENT_PROCESS_CREATE
-        | PERF_EVENT_PROCESS_EXEC | PERF_EVENT_PROCESS_EXIT | PERF_EVENT_THREAD_CREATE | PERF_EVENT_THREAD_EXIT
-        | PERF_EVENT_SIGNPOST;
+    u64 event_mask = PERF_EVENT_PROCESS_CREATE
+        | PERF_EVENT_PROCESS_EXEC | PERF_EVENT_PROCESS_EXIT | PERF_EVENT_THREAD_CREATE | PERF_EVENT_THREAD_EXIT;
     bool seen_event_type_arg = false;
 
     args_parser.add_option(pid_argument, "Target PID", nullptr, 'p', "PID");
@@ -50,8 +49,8 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
                 event_mask |= PERF_EVENT_PAGE_FAULT;
             else if (event_type == "syscall")
                 event_mask |= PERF_EVENT_SYSCALL;
-            else if (event_type == "read")
-                event_mask |= PERF_EVENT_READ;
+            else if (event_type == "filesystem")
+                event_mask |= PERF_EVENT_FILESYSTEM;
             else {
                 warnln("Unknown event type '{}' specified.", event_type);
                 exit(1);
@@ -61,7 +60,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     auto print_types = [] {
         outln();
-        outln("Event type can be one of: sample, context_switch, page_fault, syscall, read, kmalloc and kfree.");
+        outln("Event type can be one of: sample, context_switch, page_fault, syscall, filesystem, kmalloc and kfree.");
     };
 
     if (!args_parser.parse(arguments, Core::ArgsParser::FailureBehavior::PrintUsage)) {
