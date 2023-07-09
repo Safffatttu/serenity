@@ -13,7 +13,7 @@ namespace Kernel {
 
 using BlockFlags = Thread::FileBlocker::BlockFlags;
 
-static ErrorOr<NonnullRefPtr<OpenFileDescription>> open_readable_file_description(auto& fds, int fd)
+ErrorOr<NonnullRefPtr<OpenFileDescription>> open_readable_file_description(auto& fds, int fd)
 {
     auto description = TRY(fds.with_shared([&](auto& fds) { return fds.open_file_description(fd); }));
     if (!description->is_readable())
@@ -38,7 +38,7 @@ static ErrorOr<void> check_blocked_read(OpenFileDescription* description)
     return {};
 }
 
-ErrorOr<FlatPtr> Process::sys$readv(int fd, Userspace<const struct iovec*> iov, int iov_count)
+ErrorOr<FlatPtr> Process::readv_impl(int fd, Userspace<const struct iovec*> iov, int iov_count)
 {
     VERIFY_PROCESS_BIG_LOCK_ACQUIRED(this);
     TRY(require_promise(Pledge::stdio));
@@ -71,20 +71,6 @@ ErrorOr<FlatPtr> Process::sys$readv(int fd, Userspace<const struct iovec*> iov, 
     return nread;
 }
 
-ErrorOr<FlatPtr> Process::sys$read(int fd, Userspace<u8*> buffer, size_t size)
-{
-    auto const start_timestamp = TimeManagement::the().uptime_ms();
-    auto result = read_impl(fd, buffer, size);
-
-    if (Thread::current()->is_profiling_suppressed())
-        return result;
-
-    auto description = TRY(open_readable_file_description(fds(), fd));
-    PerformanceManager::add_read_event(*Thread::current(), fd, size, description, start_timestamp, result);
-
-    return result;
-}
-
 ErrorOr<FlatPtr> Process::read_impl(int fd, Userspace<u8*> buffer, size_t size)
 {
     VERIFY_PROCESS_BIG_LOCK_ACQUIRED(this);
@@ -103,7 +89,7 @@ ErrorOr<FlatPtr> Process::read_impl(int fd, Userspace<u8*> buffer, size_t size)
 
 // NOTE: The offset is passed by pointer because off_t is 64bit,
 // hence it can't be passed by register on 32bit platforms.
-ErrorOr<FlatPtr> Process::sys$pread(int fd, Userspace<u8*> buffer, size_t size, Userspace<off_t const*> userspace_offset)
+ErrorOr<FlatPtr> Process::pread_impl(int fd, Userspace<u8*> buffer, size_t size, Userspace<off_t const*> userspace_offset)
 {
     VERIFY_PROCESS_BIG_LOCK_ACQUIRED(this);
     TRY(require_promise(Pledge::stdio));

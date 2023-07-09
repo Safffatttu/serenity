@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2023, Jakub Berkop <jakub.berkop@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -76,6 +77,66 @@ struct [[gnu::packed]] ReadPerformanceEvent {
     bool success;
 };
 
+enum class FilesystemEventType : u8 {
+    Open,
+    Close,
+    Readv,
+    Read,
+    Pread
+};
+
+struct [[gnu::packed]] OpenEventData {
+    int dirfd;
+    size_t filename_index;
+    int options;
+    u64 mode;
+};
+
+struct [[gnu::packed]] CloseEventData {
+    int fd;
+    size_t filename_index;
+};
+
+struct [[gnu::packed]] ReadvEventData {
+    int fd;
+    size_t filename_index;
+    // struct iovec* iov; // TODO: Implement
+    // int iov_count; // TODO: Implement
+};
+
+struct [[gnu::packed]] ReadEventData {
+    int fd;
+    size_t filename_index;
+};
+
+struct [[gnu::packed]] PreadEventData {
+    int fd;
+    size_t filename_index;
+    FlatPtr buffer_ptr;
+    size_t size;
+    off_t offset;
+};
+
+// FIXME: This is a hack to make the compiler pack this struct correctly.
+struct [[gnu::packed]] PackedErrorOr {
+    bool is_error;
+    FlatPtr value;
+};
+
+struct [[gnu::packed]] FilesystemEvent {
+    FilesystemEventType type;
+    u64 durationNs;
+    PackedErrorOr result;
+
+    union {
+        OpenEventData open;
+        CloseEventData close;
+        ReadvEventData readv;
+        ReadEventData read;
+        PreadEventData pread;
+    } data;
+};
+
 struct [[gnu::packed]] PerformanceEvent {
     u32 type { 0 };
     u8 stack_size { 0 };
@@ -95,7 +156,7 @@ struct [[gnu::packed]] PerformanceEvent {
         KMallocPerformanceEvent kmalloc;
         KFreePerformanceEvent kfree;
         SignpostPerformanceEvent signpost;
-        ReadPerformanceEvent read;
+        FilesystemEvent filesystem;
     } data;
     static constexpr size_t max_stack_frame_count = 64;
     FlatPtr stack[max_stack_frame_count];
@@ -110,11 +171,11 @@ class PerformanceEventBuffer {
 public:
     static OwnPtr<PerformanceEventBuffer> try_create_with_size(size_t buffer_size);
 
-    ErrorOr<void> append(int type, FlatPtr arg1, FlatPtr arg2, StringView arg3, Thread* current_thread = Thread::current(), FlatPtr arg4 = 0, u64 arg5 = 0, ErrorOr<FlatPtr> const& arg6 = 0);
+    ErrorOr<void> append(int type, FlatPtr arg1, FlatPtr arg2, StringView arg3, Thread* current_thread = Thread::current(), FilesystemEvent filesystem_event = {});
     ErrorOr<void> append_with_ip_and_bp(ProcessID pid, ThreadID tid, FlatPtr eip, FlatPtr ebp,
-        int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FlatPtr arg4 = 0, u64 arg5 = {}, ErrorOr<FlatPtr> const& arg6 = 0);
+        int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FilesystemEvent filesystem_event = {});
     ErrorOr<void> append_with_ip_and_bp(ProcessID pid, ThreadID tid, RegisterState const& regs,
-        int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FlatPtr arg4 = 0, u64 arg5 = {}, ErrorOr<FlatPtr> const& arg6 = 0);
+        int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FilesystemEvent filesystem_event = {});
 
     void clear()
     {
@@ -145,7 +206,7 @@ private:
     size_t m_count { 0 };
     NonnullOwnPtr<KBuffer> m_buffer;
 
-    HashMap<NonnullOwnPtr<KString>, size_t> m_strings;
+    SpinlockProtected<HashMap<NonnullOwnPtr<KString>, size_t>, LockRank::None> m_strings;
 };
 
 extern bool g_profiling_all_threads;

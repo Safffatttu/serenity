@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2023, Jakub Berkop <jakub.berkop@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -23,10 +24,10 @@ PerformanceEventBuffer::PerformanceEventBuffer(NonnullOwnPtr<KBuffer> buffer)
 {
 }
 
-NEVER_INLINE ErrorOr<void> PerformanceEventBuffer::append(int type, FlatPtr arg1, FlatPtr arg2, StringView arg3, Thread* current_thread, FlatPtr arg4, u64 arg5, ErrorOr<FlatPtr> const& arg6)
+NEVER_INLINE ErrorOr<void> PerformanceEventBuffer::append(int type, FlatPtr arg1, FlatPtr arg2, StringView arg3, Thread* current_thread, FilesystemEvent filesystem_event)
 {
     FlatPtr base_pointer = (FlatPtr)__builtin_frame_address(0);
-    return append_with_ip_and_bp(current_thread->pid(), current_thread->tid(), 0, base_pointer, type, 0, arg1, arg2, arg3, arg4, arg5, arg6);
+    return append_with_ip_and_bp(current_thread->pid(), current_thread->tid(), 0, base_pointer, type, 0, arg1, arg2, arg3, filesystem_event);
 }
 
 static Vector<FlatPtr, PerformanceEvent::max_stack_frame_count> raw_backtrace(FlatPtr bp, FlatPtr ip)
@@ -67,13 +68,13 @@ static Vector<FlatPtr, PerformanceEvent::max_stack_frame_count> raw_backtrace(Fl
 }
 
 ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, ThreadID tid, RegisterState const& regs,
-    int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FlatPtr arg4, u64 arg5, ErrorOr<FlatPtr> const& arg6)
+    int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FilesystemEvent filesystem_event)
 {
-    return append_with_ip_and_bp(pid, tid, regs.ip(), regs.bp(), type, lost_samples, arg1, arg2, arg3, arg4, arg5, arg6);
+    return append_with_ip_and_bp(pid, tid, regs.ip(), regs.bp(), type, lost_samples, arg1, arg2, arg3, filesystem_event);
 }
 
 ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, ThreadID tid,
-    FlatPtr ip, FlatPtr bp, int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FlatPtr arg4, u64 arg5, ErrorOr<FlatPtr> const& arg6)
+    FlatPtr ip, FlatPtr bp, int type, u32 lost_samples, FlatPtr arg1, FlatPtr arg2, StringView arg3, FilesystemEvent filesystem_event)
 {
     if (count() >= capacity())
         return ENOBUFS;
@@ -159,12 +160,8 @@ ErrorOr<void> PerformanceEventBuffer::append_with_ip_and_bp(ProcessID pid, Threa
         event.data.signpost.arg1 = arg1;
         event.data.signpost.arg2 = arg2;
         break;
-    case PERF_EVENT_READ:
-        event.data.read.fd = arg1;
-        event.data.read.size = arg2;
-        event.data.read.filename_index = arg4;
-        event.data.read.start_timestamp = arg5;
-        event.data.read.success = !arg6.is_error();
+    case PERF_EVENT_FILESYSTEM:
+        event.data.filesystem = filesystem_event;
         break;
     default:
         return EINVAL;
@@ -192,19 +189,24 @@ template<typename Serializer>
 ErrorOr<void> PerformanceEventBuffer::to_json_impl(Serializer& object) const
 {
     {
-        auto strings = TRY(object.add_array("strings"sv));
+        auto strings_object = TRY(object.add_array("strings"sv));
         Vector<KString*> strings_sorted_by_index;
-        TRY(strings_sorted_by_index.try_resize(m_strings.size()));
 
-        for (auto& entry : m_strings) {
-            strings_sorted_by_index[entry.value] = const_cast<Kernel::KString*>(entry.key.ptr());
-        }
+        TRY(m_strings.with([&](auto& strings) -> ErrorOr<void> {
+            TRY(strings_sorted_by_index.try_resize(strings.size()));
 
-        for (size_t i = 0; i < m_strings.size(); i++) {
-            TRY(strings.add(strings_sorted_by_index[i]->view()));
-        }
+            for (auto& entry : strings) {
+                strings_sorted_by_index[entry.value] = const_cast<Kernel::KString*>(entry.key.ptr());
+            }
 
-        TRY(strings.finish());
+            for (size_t i = 0; i < strings.size(); i++) {
+                TRY(strings_object.add(strings_sorted_by_index[i]->view()));
+            }
+
+            return {};
+        }));
+
+        TRY(strings_object.finish());
     }
 
     auto current_process_credentials = Process::current().credentials();
@@ -289,13 +291,51 @@ ErrorOr<void> PerformanceEventBuffer::to_json_impl(Serializer& object) const
             TRY(event_object.add("arg1"sv, event.data.signpost.arg1));
             TRY(event_object.add("arg2"sv, event.data.signpost.arg2));
             break;
-        case PERF_EVENT_READ:
-            TRY(event_object.add("type"sv, "read"));
-            TRY(event_object.add("fd"sv, event.data.read.fd));
-            TRY(event_object.add("size"sv, event.data.read.size));
-            TRY(event_object.add("filename_index"sv, event.data.read.filename_index));
-            TRY(event_object.add("start_timestamp"sv, event.data.read.start_timestamp));
-            TRY(event_object.add("success"sv, event.data.read.success));
+        case PERF_EVENT_FILESYSTEM:
+            TRY(event_object.add("type"sv, "filesystem"sv));
+            TRY(event_object.add("durationNs"sv, event.data.filesystem.durationNs));
+            switch (event.data.filesystem.type) {
+            case FilesystemEventType::Open: {
+                auto const& open = event.data.filesystem.data.open;
+                TRY(event_object.add("fs_event_type"sv, "open"sv));
+                TRY(event_object.add("dirfd"sv, open.dirfd));
+                TRY(event_object.add("filename_index"sv, open.filename_index));
+                TRY(event_object.add("options"sv, open.options));
+                TRY(event_object.add("mode"sv, open.mode));
+                break;
+            }
+            case FilesystemEventType::Close: {
+                auto const& close = event.data.filesystem.data.close;
+                TRY(event_object.add("fs_event_type"sv, "close"sv));
+                TRY(event_object.add("fd"sv, close.fd));
+                TRY(event_object.add("filename_index"sv, close.filename_index));
+                break;
+            }
+            case FilesystemEventType::Readv: {
+                auto const& readv = event.data.filesystem.data.readv;
+                TRY(event_object.add("fs_event_type"sv, "readv"sv));
+                TRY(event_object.add("fd"sv, readv.fd));
+                TRY(event_object.add("filename_index"sv, readv.filename_index));
+                break;
+            }
+            case FilesystemEventType::Read: {
+                auto const& read = event.data.filesystem.data.read;
+                TRY(event_object.add("fs_event_type"sv, "read"sv));
+                TRY(event_object.add("fd"sv, read.fd));
+                TRY(event_object.add("filename_index"sv, read.filename_index));
+                break;
+            }
+            case FilesystemEventType::Pread: {
+                auto const& pread = event.data.filesystem.data.pread;
+                TRY(event_object.add("fs_event_type"sv, "pread"sv));
+                TRY(event_object.add("fd"sv, pread.fd));
+                TRY(event_object.add("filename_index"sv, pread.filename_index));
+                TRY(event_object.add("buffer_ptr"sv, pread.buffer_ptr));
+                TRY(event_object.add("size"sv, pread.size));
+                TRY(event_object.add("offset"sv, pread.offset));
+                break;
+            }
+            }
             break;
         }
         TRY(event_object.add("pid"sv, event.pid));
@@ -367,14 +407,16 @@ ErrorOr<void> PerformanceEventBuffer::add_process(Process const& process, Proces
 
 ErrorOr<FlatPtr> PerformanceEventBuffer::register_string(NonnullOwnPtr<KString> string)
 {
-    auto it = m_strings.find(string);
-    if (it != m_strings.end()) {
-        return it->value;
-    }
+    return m_strings.with([&](auto& m_strings) -> ErrorOr<FlatPtr> {
+        auto it = m_strings.find(string);
+        if (it != m_strings.end()) {
+            return it->value;
+        }
 
-    auto new_index = m_strings.size();
-    TRY(m_strings.try_set(move(string), move(new_index)));
-    return new_index;
+        auto new_index = m_strings.size();
+        TRY(m_strings.try_set(move(string), move(new_index)));
+        return new_index;
+    });
 }
 
 }
