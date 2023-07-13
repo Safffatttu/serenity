@@ -87,6 +87,9 @@ ErrorOr<String> ProfileModel::column_name(int column) const
         return TRY("Stack Frame"_string);
     case Column::SymbolAddress:
         return TRY("Symbol Address"_string);
+        return "Symbol Address";
+    case Column::AllocatedBytes:
+        return "Allocated Bytes";
     default:
         VERIFY_NOT_REACHED();
     }
@@ -138,6 +141,12 @@ GUI::Variant ProfileModel::data(GUI::ModelIndex const& index, GUI::ModelRole rol
                 return "";
             return DeprecatedString::formatted("{:p} (offset {:p})", node->address(), node->address() - library->base);
         }
+        if (index.column() == Column::AllocatedBytes) {
+            if (node->is_root())
+                return "";
+            return node->allocated_bytes();
+        }
+
         return {};
     }
     return {};

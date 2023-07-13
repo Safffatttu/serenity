@@ -27,6 +27,7 @@ public:
         ObjectName,
         StackFrame,
         SymbolAddress,
+        AllocatedBytes,
         __Count
     };
 

@@ -94,6 +94,14 @@ public:
     void increment_event_count() { ++m_event_count; }
     void increment_self_count() { ++m_self_count; }
 
+    void add_allocation(u64 size)
+    {
+        ++m_allocated_count;
+        m_allocated_size += size;
+    }
+
+    void add_free() { ++m_freed_count; }
+
     void sort_children();
 
     HashMap<FlatPtr, size_t> const& events_per_address() const { return m_events_per_address; }
@@ -111,6 +119,8 @@ public:
     Process const& process() const { return m_process; }
     bool is_root() const { return m_root; }
 
+    size_t allocated_bytes() const { return m_allocated_size; }
+
 private:
     explicit ProfileNode(Process const&);
     explicit ProfileNode(Process const&, DeprecatedFlyString const& object_name, DeprecatedString symbol, FlatPtr address, u32 offset, u64 timestamp, pid_t);
@@ -126,6 +136,9 @@ private:
     u32 m_event_count { 0 };
     u32 m_self_count { 0 };
     u64 m_timestamp { 0 };
+    u64 m_allocated_count { 0 };
+    u64 m_allocated_size { 0 };
+    u64 m_freed_count { 0 };
     Vector<NonnullRefPtr<ProfileNode>> m_children;
     HashMap<FlatPtr, size_t> m_events_per_address;
     Bitmap m_seen_events;

@@ -400,7 +400,7 @@ run_gdb() {
         GDB_ARGS+=( "$PASS_ARG_TO_GDB" )
     fi
     if [ "$TARGET" = "lagom" ]; then
-        gdb "$BUILD_DIR/bin/$LAGOM_EXECUTABLE" "${GDB_ARGS[@]}"
+        gdbserver :1234 "$BUILD_DIR/$LAGOM_EXECUTABLE" "${GDB_ARGS[@]}"
     else
         if [ -n "$KERNEL_CMD_LINE" ]; then
             export SERENITY_KERNEL_CMDLINE="$KERNEL_CMD_LINE"
@@ -481,7 +481,7 @@ if [[ "$CMD" =~ ^(build|install|image|copy-src|run|gdb|test|rebuild|recreate|kad
                 build_target
                 build_target install
                 build_image
-                tmux new-session "$ARG0" __tmux_cmd "$TARGET" "$TOOLCHAIN_TYPE" run "${CMD_ARGS[@]}" \; set-option -t 0 mouse on \; split-window "$ARG0" __tmux_cmd "$TARGET" "$TOOLCHAIN_TYPE" gdb "${CMD_ARGS[@]}" \;
+                tmux new-session "$ARG0" __tmux_cmd "$TARGET" "$TOOLCHAIN_TYPE" run "${CMD_ARGS[@]}" \; set-option -t 0 mouse on \; split-window "$ARG0" __tmux_cmd "$TARGET" "$TOOLCHAIN_TYPE" gdbserver "${CMD_ARGS[@]}" \;
             fi
             ;;
         test)

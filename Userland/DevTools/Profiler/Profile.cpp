@@ -107,6 +107,9 @@ void Profile::rebuild_tree()
     for (size_t event_index = 0; event_index < m_events.size(); ++event_index) {
         auto& event = m_events.at(event_index);
 
+        if (find_process(event.pid, event.serial) == nullptr)
+            continue;
+
         if (has_timestamp_filter_range()) {
             auto timestamp = event.timestamp;
             if (timestamp < m_timestamp_filter_range_start || timestamp > m_timestamp_filter_range_end)
@@ -166,6 +169,15 @@ void Profile::rebuild_tree()
                     node->add_event_address(address);
                     node->increment_self_count();
                 }
+
+                if (event.data.has<Event::MallocData>()) {
+                    node->add_allocation(event.data.get<Event::MallocData>().size);
+                }
+
+                if (event.data.has<Event::FreeData>()) {
+                    node->add_free();
+                }
+
                 return IterationDecision::Continue;
             });
         } else {
@@ -203,6 +215,14 @@ void Profile::rebuild_tree()
                     if (j == event.frames.size() - 1) {
                         node->add_event_address(address);
                         node->increment_self_count();
+                    }
+
+                    if (event.data.has<Event::MallocData>()) {
+                        node->add_allocation(event.data.get<Event::MallocData>().size);
+                    }
+
+                    if (event.data.has<Event::FreeData>()) {
+                        node->add_free();
                     }
                 }
             }
@@ -326,7 +346,16 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
                 .ptr = perf_event.get_addr("ptr"sv).value_or(0),
                 .size = perf_event.get_integer<size_t>("size"sv).value_or(0),
             };
+        } else if (type_string == "kmalloc"sv) {
+            event.data = Event::MallocData {
+                .ptr = perf_event.get_addr("ptr"sv).value_or(0),
+                .size = perf_event.get_integer<size_t>("size"sv).value_or(0),
+            };
         } else if (type_string == "free"sv) {
+            event.data = Event::FreeData {
+                .ptr = perf_event.get_addr("ptr"sv).value_or(0),
+            };
+        } else if (type_string == "kfree"sv) {
             event.data = Event::FreeData {
                 .ptr = perf_event.get_addr("ptr"sv).value_or(0),
             };
@@ -468,8 +497,8 @@ ErrorOr<NonnullOwnPtr<Profile>> Profile::load_from_perfcore_file(StringView path
 
             event.data = fsdata;
         } else {
-            dbgln("Unknown event type '{}'", type_string);
-            VERIFY_NOT_REACHED();
+            // dbgln("Unknown event type '{}'", type_string);
+            // VERIFY_NOT_REACHED();
         }
 
         auto maybe_kernel_base = Symbolication::kernel_base();

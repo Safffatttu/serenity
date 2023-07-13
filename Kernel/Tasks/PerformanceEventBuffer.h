@@ -203,14 +203,14 @@ private:
 
     PerformanceEvent& at(size_t index);
 
-    size_t m_count { 0 };
+    Atomic<size_t> m_count { 0 };
     NonnullOwnPtr<KBuffer> m_buffer;
 
     SpinlockProtected<HashMap<NonnullOwnPtr<KString>, size_t>, LockRank::None> m_strings;
 };
 
 extern bool g_profiling_all_threads;
-extern PerformanceEventBuffer* g_global_perf_events;
+extern PerformanceEventBuffer g_global_perf_events;
 extern u64 g_profiling_event_mask;
 
 }

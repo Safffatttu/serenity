@@ -192,6 +192,8 @@ SERENITY_AUDIO_BACKEND=""
 SERENITY_AUDIO_HW=""
 SERENITY_AUDIO_PC_SPEAKER=""
 SERENITY_AUDIO_DEVICE=""
+SERENITY_AUDIO_BACKEND=""
+SERENITY_AUDIO_HW=""
 
 SERENITY_SCREENS="${SERENITY_SCREENS:-1}"
 if [ "$SERENITY_SPICE" ]; then
@@ -315,6 +317,7 @@ if [ -z "$SERENITY_MACHINE" ]; then
         $SERENITY_AUDIO_BACKEND
         $SERENITY_AUDIO_PC_SPEAKER
         $SERENITY_AUDIO_DEVICE
+        $SERENITY_AUDIO_HW
         -device pci-bridge,chassis_nr=1,id=bridge1 -device $SERENITY_ETHERNET_DEVICE_TYPE,bus=bridge1
         -device i82801b11-bridge,bus=bridge1,id=bridge2 -device sdhci-pci,bus=bridge2
         -device i82801b11-bridge,id=bridge3 -device sdhci-pci,bus=bridge3
